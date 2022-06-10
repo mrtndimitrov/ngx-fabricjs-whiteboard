@@ -4,7 +4,6 @@
   "peerDependencies": {
     "@angular/common": "^13.0.2",
     "@angular/core": "^13.0.2",
-    "@angular/material": "^13.0.2",
     "@angular/cdk": "13.0.2"
   },
   "dependencies": {
@@ -14,7 +13,6 @@
   "devDependencies": {
     "@angular/common": "^13.0.2",
     "@angular/core": "^13.0.2",
-    "@angular/material": "^13.0.2",
     "@angular/cdk": "13.0.2",
     "@types/fabric": "^4.5.7"
   }
