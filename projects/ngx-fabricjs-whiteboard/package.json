@@ -2,20 +2,19 @@
   "name": "ngx-fabricjs-whiteboard",
   "version": "0.0.1",
   "peerDependencies": {
+    "@angular/cdk": "13.0.2",
     "@angular/common": "^13.0.2",
     "@angular/core": "^13.0.2",
-    "@angular/cdk": "13.0.2"
+    "angular-svg-icon": "^14.0.0"
   },
   "dependencies": {
     "fabric": "^5.2.1",
     "tslib": "^2.3.0"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "~13.0.4",
-    "@angular/cli": "~13.0.2",
+    "@angular/cdk": "13.0.2",
     "@angular/common": "^13.0.2",
     "@angular/core": "^13.0.2",
-    "@angular/cdk": "13.0.2",
     "@types/fabric": "^4.5.7"
   }
 }
