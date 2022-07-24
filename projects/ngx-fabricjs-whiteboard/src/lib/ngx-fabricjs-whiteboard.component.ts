@@ -1,5 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { fabric } from 'fabric';
+import { loadIcons } from './load-icons';
+import { MatIconRegistry } from '@angular/material/icon';
+import { DomSanitizer } from '@angular/platform-browser';
 
 @Component({
   selector: 'ngx-fabricjs-whiteboard',
@@ -8,9 +11,14 @@ import { fabric } from 'fabric';
 })
 export class NgxFabricjsWhiteboardComponent implements OnInit {
   private canvas: any;
-  constructor() { }
+  constructor(iconRegistry: MatIconRegistry, sanitizer: DomSanitizer) {
+    loadIcons(iconRegistry, sanitizer);
+  }
 
   ngOnInit(): void {
+    const container = document.getElementById('ngx-fabricjs-whiteboard-container');
+    this.containerHeight = container.clientHeight;
+    this.containerWidth = container.clientWidth;
     this.canvas = new fabric.Canvas('ngx-fabricjs-whiteboard', {
       hoverCursor: 'pointer',
       selection: true,
