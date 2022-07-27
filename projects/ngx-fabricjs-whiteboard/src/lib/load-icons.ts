@@ -321,6 +321,15 @@ const SELECT_ICON = `<svg id="select-icon" xmlns="http://www.w3.org/2000/svg" vi
     </g>
   </g>
 </svg>`;
+const MOVE_ICON = `<svg id="move-icon" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+  <defs>
+    <style>#move-icon .cls-1{fill:currentColor;}</style>
+  </defs>
+  <g class="cls-1">
+    <path d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z"></path>
+    <path d="M0 0h24v24H0z" fill="none"></path>
+  </g>
+</svg>`
 
 export function loadIcons(iconRegistry: MatIconRegistry, sanitizer: DomSanitizer) {
   iconRegistry.addSvgIconLiteral('undo', sanitizer.bypassSecurityTrustHtml(UNDO_ICON));
@@ -344,4 +353,5 @@ export function loadIcons(iconRegistry: MatIconRegistry, sanitizer: DomSanitizer
   iconRegistry.addSvgIconLiteral('delimited-line', sanitizer.bypassSecurityTrustHtml(DELIMITED_LINE_ICON));
   iconRegistry.addSvgIconLiteral('fill', sanitizer.bypassSecurityTrustHtml(FILL_ICON));
   iconRegistry.addSvgIconLiteral('select', sanitizer.bypassSecurityTrustHtml(SELECT_ICON));
+  iconRegistry.addSvgIconLiteral('move', sanitizer.bypassSecurityTrustHtml(MOVE_ICON));
 }

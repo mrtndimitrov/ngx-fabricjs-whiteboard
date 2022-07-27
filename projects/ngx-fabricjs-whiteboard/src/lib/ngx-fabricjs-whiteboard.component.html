@@ -1,15 +1,81 @@
-<div id="ngx-fabricjs-whiteboard-container">
-  <div id="toolbar" cdkDrag cdkDragBoundary="#ngx-fabricjs-whiteboard-container" fxLayout="column" fxLayoutAlign="start center" fxLayoutGap="20px">
-    <mat-icon svgIcon="select"></mat-icon>
-    <mat-icon svgIcon="text"></mat-icon>
-    <mat-icon svgIcon="square" class="filled"></mat-icon>
+<div id="ngx-fabricjs-whiteboard-container" #ngxFabricjsWhiteboardContainer>
+  <div id="toolbar" cdkDrag cdkDragBoundary="#ngx-fabricjs-whiteboard-container" fxLayout="column" fxLayoutAlign="start center" fxLayoutGap="10px">
+    <mat-icon svgIcon="select" [class.selected]="selectedTool === 'pointer' && !figuresMenuOpened"
+              (click)="selectedTool = 'pointer'; figuresMenuTrigger.closeMenu(); canvas.defaultCursor = 'default'; this.canvas.set({selection: true});"></mat-icon>
+    <mat-icon svgIcon="text" (click)="addText('Some text')"></mat-icon>
+    <mat-icon svgIcon="square"
+              [matMenuTriggerFor]="figuresMenu"
+              #figuresMenuTrigger="matMenuTrigger"
+              (menuOpened)="figuresMenuOpened = true"
+              (menuClosed)="figuresMenuOpened = false; figuresMenuClosed()"
+              [class.selected]="figuresMenuOpened || isFigureSelected()"></mat-icon>
+    <mat-icon svgIcon="eraser"></mat-icon>
+    <mat-icon svgIcon="move" id="move-handler" cdkDragHandle></mat-icon>
   </div>
-  <button (click)="addText('Some text')">Text</button>
-  <button (click)="addFigure('triangle')">Triangle</button>
-  <button (click)="addFigure('circle')">Circle</button>
-  <button (click)="addFigure('square')">Square</button>
-  <button (click)="addFigure('rectangle')">Rectangle</button>
-
-
   <canvas id="ngx-fabricjs-whiteboard"></canvas>
+
+  <mat-menu #figuresMenu="matMenu" xPosition="after" [overlapTrigger]="false" class="figures-menu">
+    <div (click)="$event.stopPropagation();">
+      <mat-icon svgIcon="square" class="color-picker-icon"
+                [(colorPicker)]="strokeColor"
+                [cpUseRootViewContainer]="true"
+                [style.color]="strokeColor"
+                [cpEyeDropper]="true"
+                [cpOKButton]="true"
+                cpOKButtonText="Избери"
+                cpOKButtonClass= "btn btn-primary btn-xs"
+                [cpCancelButton]="true"
+                cpCancelButtonText="Откажи"
+                cpCancelButtonClass=""
+                cpPresetLabel=""
+                [cpMaxPresetColorsLength]="16"
+                [cpPresetColors]="['#fff', '#fdf34b', '#f8c12b', '#ee422c', '#e2e2e2', '#c7e445', '#85cb4c',
+                '#d3135a', '#757575', '#1fc5cc', '#189c7e', '#8911a0', '#191919', '#2c8fea', '#3a40a6', '#5a25a7']"
+                [cpDisableInput]="true"></mat-icon>
+      <span>Контур</span>
+    </div>
+    <div (click)="$event.stopPropagation();">
+      <mat-icon svgIcon="square" class="filled color-picker-icon"
+                [(colorPicker)]="fillColor"
+                [cpUseRootViewContainer]="true"
+                [style.color]="fillColor"
+                [cpEyeDropper]="true"
+                [cpOKButton]="true"
+                cpOKButtonText="Избери"
+                cpOKButtonClass= "btn btn-primary btn-xs"
+                [cpCancelButton]="true"
+                cpCancelButtonText="Откажи"
+                cpCancelButtonClass=""
+                cpPresetLabel=""
+                [cpMaxPresetColorsLength]="16"
+                [cpPresetColors]="['#fff', '#fdf34b', '#f8c12b', '#ee422c', '#e2e2e2', '#c7e445', '#85cb4c',
+                '#d3135a', '#757575', '#1fc5cc', '#189c7e', '#8911a0', '#191919', '#2c8fea', '#3a40a6', '#5a25a7']"
+                [cpDisableInput]="true"></mat-icon>
+      <span>Запълване</span>
+    </div>
+    <div>
+      <mat-icon svgIcon="square" (click)="selectedTool = 'square'" [class.selected]="selectedTool === 'square'"></mat-icon>
+      <mat-icon svgIcon="square" class="filled" (click)="selectedTool = 'filled-square'" [class.selected]="selectedTool === 'filled-square'"></mat-icon>
+    </div>
+    <div>
+      <mat-icon svgIcon="circle" (click)="selectedTool = 'circle'" [class.selected]="selectedTool === 'circle'"></mat-icon>
+      <mat-icon svgIcon="circle" class="filled" (click)="selectedTool = 'filled-circle'" [class.selected]="selectedTool === 'filled-circle'"></mat-icon>
+    </div>
+    <div>
+      <mat-icon svgIcon="rectangle" (click)="selectedTool = 'rectangle'" [class.selected]="selectedTool === 'rectangle'"></mat-icon>
+      <mat-icon svgIcon="rectangle" class="filled" (click)="selectedTool = 'filled-rectangle'" [class.selected]="selectedTool === 'filled-rectangle'"></mat-icon>
+    </div>
+    <div>
+      <mat-icon svgIcon="hexagon" (click)="selectedTool = 'hexagon'" [class.selected]="selectedTool === 'hexagon'"></mat-icon>
+      <mat-icon svgIcon="hexagon" class="filled" (click)="selectedTool = 'filled-hexagon'" [class.selected]="selectedTool === 'filled-hexagon'"></mat-icon>
+    </div>
+    <div>
+      <mat-icon svgIcon="triangle" (click)="selectedTool = 'triangle'" [class.selected]="selectedTool === 'triangle'"></mat-icon>
+      <mat-icon svgIcon="triangle" class="filled" (click)="selectedTool = 'filled-triangle'" [class.selected]="selectedTool === 'filled-triangle'"></mat-icon>
+    </div>
+    <div>
+      <mat-icon svgIcon="delimited-line" (click)="selectedTool = 'delimited-line'" [class.selected]="selectedTool === 'delimited-line'"></mat-icon>
+      <mat-icon svgIcon="line" (click)="selectedTool = 'line'" [class.selected]="selectedTool === 'line'"></mat-icon>
+    </div>
+  </mat-menu>
 </div>

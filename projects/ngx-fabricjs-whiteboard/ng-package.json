@@ -4,5 +4,5 @@
   "lib": {
     "entryFile": "src/public-api.ts"
   },
-  "allowedNonPeerDependencies": ["fabric"]
+  "allowedNonPeerDependencies": ["fabric", "ngx-color-picker"]
 }

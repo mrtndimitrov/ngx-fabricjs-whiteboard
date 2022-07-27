@@ -6,6 +6,8 @@ import { DragDropModule } from '@angular/cdk/drag-drop';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { BrowserModule } from '@angular/platform-browser';
 import { FlexLayoutModule } from '@angular/flex-layout';
+import { MatMenuModule } from '@angular/material/menu';
+import { ColorPickerModule } from 'ngx-color-picker';
 
 @NgModule({
   declarations: [
@@ -17,7 +19,9 @@ import { FlexLayoutModule } from '@angular/flex-layout';
     HttpClientModule,
     MatIconModule,
     DragDropModule,
-    FlexLayoutModule
+    FlexLayoutModule,
+    MatMenuModule,
+    ColorPickerModule
   ],
   exports: [
     NgxFabricjsWhiteboardComponent
