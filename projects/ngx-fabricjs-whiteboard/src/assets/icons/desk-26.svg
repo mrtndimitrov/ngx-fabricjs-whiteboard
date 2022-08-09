@@ -1,1 +1,30 @@
-<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" width="24.13" height="24.13" viewBox="0 0 24.13 24.13"><defs><style>.cls-1,.cls-4{fill:#2e3191;}.cls-1,.cls-3{stroke:#2e3191;}.cls-1,.cls-2,.cls-3{stroke-linejoin:round;stroke-width:1.13px;}.cls-2,.cls-3{fill:#fff;}.cls-2{stroke:#fff;}</style></defs><rect class="cls-1" x="8.87" y="0.57" width="14.7" height="14.7"/><rect class="cls-2" x="0.57" y="6.87" width="16.7" height="16.7"/><rect class="cls-3" x="1.57" y="7.87" width="14.7" height="14.7"/><polyline class="cls-1" points="2.07 22.57 4.97 18.07 8.57 20.57 11.57 15.77 16.27 22.57"/><circle class="cls-4" cx="7.07" cy="12.57" r="1.8"/></svg>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" width="24.13" height="24.13"
+     viewBox="0 0 24.13 24.13">
+  <defs>
+    <style>.cls-1, .cls-4 {
+      fill: #2e3191;
+    }
+
+    .cls-1, .cls-3 {
+      stroke: #2e3191;
+    }
+
+    .cls-1, .cls-2, .cls-3 {
+      stroke-linejoin: round;
+      stroke-width: 1.13px;
+    }
+
+    .cls-2, .cls-3 {
+      fill: #fff;
+    }
+
+    .cls-2 {
+      stroke: #fff;
+    }</style>
+  </defs>
+  <rect class="cls-1" x="8.87" y="0.57" width="14.7" height="14.7"/>
+  <rect class="cls-2" x="0.57" y="6.87" width="16.7" height="16.7"/>
+  <rect class="cls-3" x="1.57" y="7.87" width="14.7" height="14.7"/>
+  <polyline class="cls-1" points="2.07 22.57 4.97 18.07 8.57 20.57 11.57 15.77 16.27 22.57"/>
+  <circle class="cls-4" cx="7.07" cy="12.57" r="1.8"/>
+</svg>

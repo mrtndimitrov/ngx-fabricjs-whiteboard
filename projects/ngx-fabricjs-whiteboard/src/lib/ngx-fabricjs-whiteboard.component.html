@@ -1,25 +1,151 @@
-<div id="ngx-fabricjs-whiteboard-container" #ngxFabricjsWhiteboardContainer>
-  <div id="toolbar" cdkDrag cdkDragBoundary="#ngx-fabricjs-whiteboard-container" fxLayout="column" fxLayoutAlign="start center" fxLayoutGap="10px">
-    <mat-icon svgIcon="select" [class.selected]="selectedTool === 'pointer' && !figuresMenuOpened"
-              (click)="selectedTool = 'pointer'; figuresMenuTrigger.closeMenu(); canvas.defaultCursor = 'default'; this.canvas.set({selection: true});"></mat-icon>
-    <mat-icon svgIcon="text" (click)="addText('Some text')"></mat-icon>
-    <mat-icon svgIcon="square"
+<div id="ngx-fabricjs-whiteboard-container" #ngxFabricjsWhiteboardContainer [class.grab]="panHandStarting" [class.grabbing]="panHandStarted">
+  <div *ngIf="!noHeader" id="header" fxLayout="row" fxLayoutAlign="start center">
+    <div>Бяла дъска</div>
+    <div fxFlex></div>
+    <mat-icon svgIcon="save"></mat-icon>
+    <mat-icon svgIcon="close"></mat-icon>
+  </div>
+  <div id="tools-toolbar" class="toolbar" cdkDrag cdkDragBoundary="#ngx-fabricjs-whiteboard-container" fxLayout="column" fxLayoutAlign="start center">
+    <mat-icon [style.color]="toolsColor" svgIcon="select" [class.selected]="selectedTool === 'pointer' && !isFiguresMenuOpened && !isDrawMenuOpened && !isEraserMenuOpened && !isBackgroundMenuOpened"
+              (click)="pointerSelected()"></mat-icon>
+    <mat-icon [style.color]="toolsColor" svgIcon="text"
+              [matMenuTriggerFor]="textMenu"
+              #textMenuTrigger="matMenuTrigger"
+              (menuOpened)="textMenuOpened()"
+              [class.selected]="selectedTool === 'text'"></mat-icon>
+    <mat-icon [style.color]="toolsColor" [svgIcon]="figureToolSelected" [class.filled]="figureToolSelectedFilled"
               [matMenuTriggerFor]="figuresMenu"
               #figuresMenuTrigger="matMenuTrigger"
-              (menuOpened)="figuresMenuOpened = true"
-              (menuClosed)="figuresMenuOpened = false; figuresMenuClosed()"
-              [class.selected]="figuresMenuOpened || isFigureSelected()"></mat-icon>
-    <mat-icon svgIcon="eraser"></mat-icon>
-    <mat-icon svgIcon="move" id="move-handler" cdkDragHandle></mat-icon>
+              (menuOpened)="figuresMenuOpened()"
+              (menuClosed)="figuresMenuClosed()"
+              [class.selected]="isFiguresMenuOpened || isFigureSelected()"></mat-icon>
+    <mat-icon [style.color]="toolsColor" svgIcon="eraser"
+              [matMenuTriggerFor]="eraserMenu"
+              #eraserMenuTrigger="matMenuTrigger"
+              (menuOpened)="eraserMenuOpened()"
+              (menuClosed)="eraserMenuClosed()"
+              [class.selected]="isEraserMenuOpened || isEraserSelected()"></mat-icon>
+    <mat-icon [style.color]="toolsColor" [svgIcon]="drawToolSelected"
+              [matMenuTriggerFor]="drawMenu"
+              #drawMenuTrigger="matMenuTrigger"
+              (menuOpened)="drawMenuOpened()"
+              (menuClosed)="drawMenuClosed()"
+              [class.selected]="isDrawMenuOpened || isDrawSelected()"></mat-icon>
+    <mat-icon [style.color]="toolsColor" [class.selected]="isUploadImageDialogOpened" svgIcon="upload-image"
+              style="width: 24px; height: 24px" (click)="uploadImage()"></mat-icon>
+    <mat-icon *ngIf="allowBackgroundChange" [style.color]="toolsColor" [svgIcon]="bg ? bg : 'background'"
+              [matMenuTriggerFor]="backgroundMenu"
+              #backgroundMenuTrigger="matMenuTrigger"
+              (menuOpened)="backgroundMenuOpened()"
+              (menuClosed)="backgroundMenuClosed()"
+              [class.selected]="isBackgroundMenuOpened"></mat-icon>
+    <mat-icon [style.color]="toolsColor" svgIcon="move" id="move-handler" cdkDragHandle></mat-icon>
   </div>
-  <canvas id="ngx-fabricjs-whiteboard"></canvas>
+  <div id="undo-toolbar" class="toolbar" fxLayout="row" fxLayoutAlign="center center">
+    <mat-icon [style.color]="toolsColor" svgIcon="undo" (click)="canvas.undo();"></mat-icon>
+    <mat-icon [style.color]="toolsColor" svgIcon="redo" (click)="canvas.redo();"></mat-icon>
+  </div>
+  <div id="zoom-toolbar" class="toolbar" fxLayout="row" fxLayoutAlign="center center">
+    <mat-icon [style.color]="toolsColor" [svgIcon]="fullScreen ? 'no-full-screen' : 'full-screen'" (click)="toggleFullScreen()"></mat-icon>
+    <div class="separator"></div>
+    <mat-icon style="color:#9e9e9e" (click)="zoom(-1)">remove</mat-icon>
+    <span>{{getZoomLevel()}}%</span>
+    <mat-icon style="color:#9e9e9e" (click)="zoom(1)">add</mat-icon>
+  </div>
 
-  <mat-menu #figuresMenu="matMenu" xPosition="after" [overlapTrigger]="false" class="figures-menu">
+  <div *ngIf="allowBackgroundChange" [class]="bg" id="background" [style]="{
+        backgroundSize: bgSize + '%',
+        opacity: bgOpacity,
+        backgroundColor: bgColor,
+        top: noHeader ? '0' : '42px',
+        height: noHeader ? '100%' : 'calc(100% - 42px)'
+      }"></div>
+  <canvas id="ngx-fabricjs-whiteboard" [style]="{top: noHeader ? '0' : '42px'}"></canvas>
+
+  <mat-menu #textMenu="matMenu" [hasBackdrop]="false" xPosition="after" [overlapTrigger]="false" class="text-menu">
+    <div (click)="$event.stopPropagation();" fxLayout="row" fxLayoutAlign="start center">
+      <mat-form-field appearance="outline" id="font-family-selection">
+        <mat-select [value]="selectedTextFont ? selectedTextFont : textFont" (selectionChange)="textFontSelected($event.value)">
+          <mat-option [style]="{fontFamily: font.name}" *ngFor="let font of loadedFonts" [value]="font.name">{{font.display}}</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <span id="text-picker"
+                (colorPickerChange)="colorSelected('text', $event)"
+                [colorPicker]="selectedTextColor ? selectedTextColor : textColor"
+                [style.background-color]="selectedTextColor ? selectedTextColor : textColor"
+                [cpEyeDropper]="true"
+                [cpOKButton]="true"
+                cpOKButtonText="Избери"
+                cpOKButtonClass= "btn btn-primary btn-xs"
+                [cpCancelButton]="true"
+                cpCancelButtonText="Откажи"
+                cpCancelButtonClass=""
+                cpPresetLabel=""
+                [cpMaxPresetColorsLength]="16"
+                [cpPresetColors]="['#fff', '#fdf34b', '#f8c12b', '#ee422c', '#e2e2e2', '#c7e445', '#85cb4c',
+                  '#d3135a', '#757575', '#1fc5cc', '#189c7e', '#8911a0', '#191919', '#2c8fea', '#3a40a6', '#5a25a7']"
+                [cpDisableInput]="true"></span>
+    </div>
+    <div (click)="$event.stopPropagation();" fxLayout="row" fxLayoutAlign="start center">
+      <mat-form-field appearance="outline" id="font-size-selection">
+        <mat-select [value]="selectedTextSize ? selectedTextSize : textSize" (selectionChange)="textSizeSelected($event.value)">
+          <mat-option [value]="12">12 pt</mat-option>
+          <mat-option [value]="14">14 pt</mat-option>
+          <mat-option [value]="16">16 pt</mat-option>
+          <mat-option [value]="18">18 pt</mat-option>
+          <mat-option [value]="20">20 pt</mat-option>
+          <mat-option [value]="22">22 pt</mat-option>
+          <mat-option [value]="24">24 pt</mat-option>
+          <mat-option [value]="26">26 pt</mat-option>
+          <mat-option [value]="28">28 pt</mat-option>
+          <mat-option [value]="30">30 pt</mat-option>
+          <mat-option [value]="32">32 pt</mat-option>
+          <mat-option [value]="40">40 pt</mat-option>
+          <mat-option [value]="60">60 pt</mat-option>
+          <mat-option [value]="80">80 pt</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-button-toggle-group id="font-styles" [value]="selectedFontStyles ? selectedFontStyles : fontStyles" multiple (change)="fontStylesChanged($event.value)">
+        <mat-button-toggle value="bold">
+          <mat-icon svgIcon="bold" [style.color]="toolsColor"></mat-icon>
+        </mat-button-toggle>
+        <mat-button-toggle value="italic">
+          <mat-icon svgIcon="italic" [style.color]="toolsColor"></mat-icon>
+        </mat-button-toggle>
+        <mat-button-toggle value="underline">
+          <mat-icon svgIcon="underline" [style.color]="toolsColor"></mat-icon>
+        </mat-button-toggle>
+        <mat-button-toggle value="linethrough">
+          <mat-icon svgIcon="linethrough" [style.color]="toolsColor"></mat-icon>
+        </mat-button-toggle>
+      </mat-button-toggle-group>
+    </div>
+    <div (click)="$event.stopPropagation();" fxLayout="row" fxLayoutAlign="start center">
+      <mat-button-toggle-group [value]="selectedTextAlign ? selectedTextAlign : textAlign" (change)="textAlignChanged($event.value)">
+        <mat-button-toggle value="left">
+          <mat-icon [style.color]="toolsColor">format_align_left</mat-icon>
+        </mat-button-toggle>
+        <mat-button-toggle value="justify">
+          <mat-icon [style.color]="toolsColor">format_align_justify</mat-icon>
+        </mat-button-toggle>
+        <mat-button-toggle value="right">
+          <mat-icon [style.color]="toolsColor">format_align_right</mat-icon>
+        </mat-button-toggle>
+        <mat-button-toggle value="center">
+          <mat-icon [style.color]="toolsColor">format_align_center</mat-icon>
+        </mat-button-toggle>
+      </mat-button-toggle-group>
+      <button mat-stroked-button [style.color]="toolsColor" *ngIf="selectedObjects.length === 0 || !isHyperLinkSelected()" class="link-button" (click)="createHyperlink()"><mat-icon>add_link</mat-icon></button>
+      <button mat-stroked-button [style.color]="toolsColor" *ngIf="selectedObjects.length > 0 && isHyperLinkSelected()" class="link-button" (click)="removeHyperlink()"><mat-icon>link_off</mat-icon></button>
+    </div>
+  </mat-menu>
+
+  <mat-menu #figuresMenu="matMenu" [hasBackdrop]="false" xPosition="after" [overlapTrigger]="false" class="figures-menu">
     <div (click)="$event.stopPropagation();">
       <mat-icon svgIcon="square" class="color-picker-icon"
-                [(colorPicker)]="strokeColor"
-                [cpUseRootViewContainer]="true"
-                [style.color]="strokeColor"
+                (colorPickerChange)="colorSelected('figure-stroke', $event)"
+                [colorPicker]="selectedFigureStrokeColor ? selectedFigureStrokeColor : figureStrokeColor"
+                [style.color]="selectedFigureStrokeColor ? selectedFigureStrokeColor : figureStrokeColor"
                 [cpEyeDropper]="true"
                 [cpOKButton]="true"
                 cpOKButtonText="Избери"
@@ -32,13 +158,22 @@
                 [cpPresetColors]="['#fff', '#fdf34b', '#f8c12b', '#ee422c', '#e2e2e2', '#c7e445', '#85cb4c',
                 '#d3135a', '#757575', '#1fc5cc', '#189c7e', '#8911a0', '#191919', '#2c8fea', '#3a40a6', '#5a25a7']"
                 [cpDisableInput]="true"></mat-icon>
-      <span>Контур</span>
+      <span class="sub-title">Контур</span>
+    </div>
+    <div (click)="$event.stopPropagation();">
+      <mat-slider id="figure-stroke-slider" step="1" min="1" max="30"
+                  [value]="selectedFigureStokeWidth ? selectedFigureStokeWidth : figureStokeWidth"
+                  tickInterval="0"
+                  [thumbLabel]="true"
+                  (input)="strokeWidthSelected($event.value)">
+      </mat-slider>
+      <span class="sub-title">Дебелина</span>
     </div>
     <div (click)="$event.stopPropagation();">
       <mat-icon svgIcon="square" class="filled color-picker-icon"
-                [(colorPicker)]="fillColor"
-                [cpUseRootViewContainer]="true"
-                [style.color]="fillColor"
+                (colorPickerChange)="colorSelected('figure-fill', $event)"
+                [colorPicker]="selectedFigureFillColor ? selectedFigureFillColor : figureFillColor"
+                [style.color]="selectedFigureFillColor ? selectedFigureFillColor : figureFillColor"
                 [cpEyeDropper]="true"
                 [cpOKButton]="true"
                 cpOKButtonText="Избери"
@@ -51,31 +186,238 @@
                 [cpPresetColors]="['#fff', '#fdf34b', '#f8c12b', '#ee422c', '#e2e2e2', '#c7e445', '#85cb4c',
                 '#d3135a', '#757575', '#1fc5cc', '#189c7e', '#8911a0', '#191919', '#2c8fea', '#3a40a6', '#5a25a7']"
                 [cpDisableInput]="true"></mat-icon>
-      <span>Запълване</span>
+      <span class="sub-title">Запълване</span>
     </div>
     <div>
-      <mat-icon svgIcon="square" (click)="selectedTool = 'square'" [class.selected]="selectedTool === 'square'"></mat-icon>
-      <mat-icon svgIcon="square" class="filled" (click)="selectedTool = 'filled-square'" [class.selected]="selectedTool === 'filled-square'"></mat-icon>
+      <mat-icon [style.color]="toolsColor" svgIcon="square" (click)="selectFigureTool('square')" [class.selected]="selectedTool === 'square'"></mat-icon>
+      <mat-icon [style.color]="toolsColor" svgIcon="square" class="filled" (click)="selectFigureTool('filled-square')" [class.selected]="selectedTool === 'filled-square'"></mat-icon>
     </div>
     <div>
-      <mat-icon svgIcon="circle" (click)="selectedTool = 'circle'" [class.selected]="selectedTool === 'circle'"></mat-icon>
-      <mat-icon svgIcon="circle" class="filled" (click)="selectedTool = 'filled-circle'" [class.selected]="selectedTool === 'filled-circle'"></mat-icon>
+      <mat-icon [style.color]="toolsColor" svgIcon="circle" (click)="selectFigureTool('circle')" [class.selected]="selectedTool === 'circle'"></mat-icon>
+      <mat-icon [style.color]="toolsColor" svgIcon="circle" class="filled" (click)="selectFigureTool('filled-circle')" [class.selected]="selectedTool === 'filled-circle'"></mat-icon>
     </div>
     <div>
-      <mat-icon svgIcon="rectangle" (click)="selectedTool = 'rectangle'" [class.selected]="selectedTool === 'rectangle'"></mat-icon>
-      <mat-icon svgIcon="rectangle" class="filled" (click)="selectedTool = 'filled-rectangle'" [class.selected]="selectedTool === 'filled-rectangle'"></mat-icon>
+      <mat-icon [style.color]="toolsColor" svgIcon="rectangle" (click)="selectFigureTool('rectangle')" [class.selected]="selectedTool === 'rectangle'"></mat-icon>
+      <mat-icon [style.color]="toolsColor" svgIcon="rectangle" class="filled" (click)="selectFigureTool('filled-rectangle')" [class.selected]="selectedTool === 'filled-rectangle'"></mat-icon>
     </div>
     <div>
-      <mat-icon svgIcon="hexagon" (click)="selectedTool = 'hexagon'" [class.selected]="selectedTool === 'hexagon'"></mat-icon>
-      <mat-icon svgIcon="hexagon" class="filled" (click)="selectedTool = 'filled-hexagon'" [class.selected]="selectedTool === 'filled-hexagon'"></mat-icon>
+      <mat-icon [style.color]="toolsColor" svgIcon="hexagon" (click)="selectFigureTool('hexagon')" [class.selected]="selectedTool === 'hexagon'"></mat-icon>
+      <mat-icon [style.color]="toolsColor" svgIcon="hexagon" class="filled" (click)="selectFigureTool('filled-hexagon')" [class.selected]="selectedTool === 'filled-hexagon'"></mat-icon>
     </div>
     <div>
-      <mat-icon svgIcon="triangle" (click)="selectedTool = 'triangle'" [class.selected]="selectedTool === 'triangle'"></mat-icon>
-      <mat-icon svgIcon="triangle" class="filled" (click)="selectedTool = 'filled-triangle'" [class.selected]="selectedTool === 'filled-triangle'"></mat-icon>
+      <mat-icon [style.color]="toolsColor" svgIcon="triangle" (click)="selectFigureTool('triangle')" [class.selected]="selectedTool === 'triangle'"></mat-icon>
+      <mat-icon [style.color]="toolsColor" svgIcon="triangle" class="filled" (click)="selectFigureTool('filled-triangle')" [class.selected]="selectedTool === 'filled-triangle'"></mat-icon>
     </div>
     <div>
-      <mat-icon svgIcon="delimited-line" (click)="selectedTool = 'delimited-line'" [class.selected]="selectedTool === 'delimited-line'"></mat-icon>
-      <mat-icon svgIcon="line" (click)="selectedTool = 'line'" [class.selected]="selectedTool === 'line'"></mat-icon>
+      <mat-icon [style.color]="toolsColor" svgIcon="delimited-line" (click)="selectFigureTool('delimited-line')" [class.selected]="selectedTool === 'delimited-line'"></mat-icon>
+      <mat-icon [style.color]="toolsColor" svgIcon="line" (click)="selectFigureTool('line')" [class.selected]="selectedTool === 'line'"></mat-icon>
+    </div>
+  </mat-menu>
+
+  <mat-menu #eraserMenu="matMenu" [hasBackdrop]="false" xPosition="after" [overlapTrigger]="false" class="eraser-menu">
+    <div (click)="$event.stopPropagation();">
+      <mat-icon [style.color]="toolsColor" svgIcon="eraser" (click)="eraserPressed()" [class.selected]="selectedTool === 'eraser'"></mat-icon>
+      <br>
+      <mat-icon [style.color]="toolsColor" svgIcon="close" (click)="clearCanvas()"></mat-icon>
+    </div>
+  </mat-menu>
+
+  <mat-menu #drawMenu="matMenu" [hasBackdrop]="false" xPosition="after" [overlapTrigger]="false" class="draw-menu">
+    <div (click)="$event.stopPropagation();">
+      <mat-icon #pencilDrawMenuTrigger="matMenuTrigger" [style.color]="toolsColor" svgIcon="pencil" [matMenuTriggerFor]="pencilDrawMenu" (click)="pencilPressed()" [class.selected]="selectedTool === 'pencil'"></mat-icon>
+      <mat-icon #markerDrawMenuTrigger="matMenuTrigger" [style.color]="toolsColor" svgIcon="marker" [matMenuTriggerFor]="markerDrawMenu" (click)="markerPressed()" [class.selected]="selectedTool === 'marker'"></mat-icon>
+      <mat-icon #bucketDrawMenuTrigger="matMenuTrigger" [style.color]="toolsColor" svgIcon="bucket" [matMenuTriggerFor]="bucketDrawMenu" (click)="bucketPressed()" [class.selected]="selectedTool === 'bucket'"></mat-icon>
+    </div>
+  </mat-menu>
+
+  <mat-menu #pencilDrawMenu="matMenu" [hasBackdrop]="false" xPosition="after" [overlapTrigger]="false" class="draw-settings-menu">
+    <ng-container [ngTemplateOutlet]="drawSettingsTemplate"
+                  [ngTemplateOutletContext]="{type: 'pencil', width: pencilWidth, selectedWidth: selectedPencilWidth,
+                                              color: pencilColor, selectedColor: selectedPencilColor}"></ng-container>
+  </mat-menu>
+
+  <mat-menu #markerDrawMenu="matMenu" [hasBackdrop]="false" xPosition="after" [overlapTrigger]="false" class="draw-settings-menu">
+    <ng-container [ngTemplateOutlet]="drawSettingsTemplate"
+                  [ngTemplateOutletContext]="{type: 'marker', width: markerWidth, selectedWidth: selectedMarkerWidth,
+                                              opacity: markerOpacity, selectedOpacity: selectedMarkerOpacity,
+                                              color: markerColor, selectedColor: selectedMarkerColor}"></ng-container>
+  </mat-menu>
+
+  <mat-menu #bucketDrawMenu="matMenu" [hasBackdrop]="false" xPosition="after" [overlapTrigger]="false" class="draw-settings-menu">
+    <ng-container [ngTemplateOutlet]="drawSettingsTemplate"
+                  [ngTemplateOutletContext]="{type: 'bucket', color: bucketColor, selectedColor: selectedBucketColor}"></ng-container>
+  </mat-menu>
+
+  <mat-menu #backgroundMenu="matMenu" [hasBackdrop]="false" xPosition="after" [overlapTrigger]="false" class="background-menu">
+    <div (click)="$event.stopPropagation();">
+      <mat-slider step="10" min="10" max="110"
+                  [value]="bgSize"
+                  (input)="bgSize = $event.value!"
+                  [displayWith]="backGroundWidthLabel"
+                  [thumbLabel]="true">
+      </mat-slider>
+      <span class="sub-title">Дебелина</span>
+    </div>
+    <div (click)="$event.stopPropagation();">
+      <mat-slider step="0.1" min="0" max="1"
+                  [value]="1 - bgOpacity"
+                  (input)="bgOpacity = 1 - $event.value!"
+                  [displayWith]="backGroundOpacityLabel"
+                  [thumbLabel]="true">
+      </mat-slider>
+      <span class="sub-title">Прозрачност</span>
+    </div>
+    <div>
+      <mat-icon [style.color]="toolsColor" svgIcon="bg-1" (click)="selectBackground('bg-1')" [class.selected]="bg === 'bg-1'"></mat-icon>
+      <mat-icon [style.color]="toolsColor" svgIcon="bg-2" (click)="selectBackground('bg-2')" [class.selected]="bg === 'bg-2'"></mat-icon>
+    </div>
+    <div>
+      <mat-icon [style.color]="toolsColor" svgIcon="bg-3" (click)="selectBackground('bg-3')" [class.selected]="bg === 'bg-3'"></mat-icon>
+      <mat-icon [style.color]="toolsColor" svgIcon="bg-4" (click)="selectBackground('bg-4')" [class.selected]="bg === 'bg-4'"></mat-icon>
+    </div>
+    <div>
+      <mat-icon [style.color]="toolsColor" svgIcon="bg-5" (click)="selectBackground('bg-5')" [class.selected]="bg === 'bg-5'"></mat-icon>
+      <mat-icon [style.color]="toolsColor" svgIcon="bg-6" (click)="selectBackground('bg-6')" [class.selected]="bg === 'bg-6'"></mat-icon>
     </div>
   </mat-menu>
 </div>
+
+<ng-template #drawSettingsTemplate let-type="type" let-width="width" let-selectedWidth="selectedWidth"
+             let-color="color" let-selectedColor="selectedColor"
+             let-opacity="opacity" let-selectedOpacity="selectedOpacity">
+  <div (click)="$event.stopPropagation();" *ngIf="type === 'pencil'">
+    <mat-slider step="1" [min]="1" max="30"
+                [value]="selectedWidth ? selectedWidth : width"
+                tickInterval="0"
+                [thumbLabel]="true"
+                (input)="drawWidthSelected(type, $event.value)">
+    </mat-slider>
+    <span class="sub-title">Дебелина</span>
+  </div>
+  <div (click)="$event.stopPropagation();" *ngIf="type === 'marker'">
+    <mat-slider step="1" [min]="10" max="80"
+                [value]="selectedWidth ? selectedWidth : width"
+                tickInterval="0"
+                [thumbLabel]="true"
+                (input)="drawWidthSelected(type, $event.value)">
+    </mat-slider>
+    <span class="sub-title">Дебелина</span>
+  </div>
+  <div (click)="$event.stopPropagation();" *ngIf="type === 'marker'">
+    <mat-slider step="0.1" min="0" max="1"
+                [value]="1 - (selectedOpacity ? selectedOpacity : opacity)"
+                [displayWith]="drawOpacityLabel"
+                tickInterval="0"
+                [thumbLabel]="true"
+                (input)="drawOpacitySelected(type, $event.value)">
+    </mat-slider>
+    <span class="sub-title">Прозрачност</span>
+  </div>
+  <div (click)="$event.stopPropagation();">
+    <ng-container [ngTemplateOutlet]="colorPresetTemplate" [ngTemplateOutletContext]="{type: type, color: color, selectedColor: selectedColor, presetColors: ['#fff', '#e3e3e3']}"></ng-container>
+    <ng-container [ngTemplateOutlet]="colorPresetTemplate" [ngTemplateOutletContext]="{type: type, color: color, selectedColor: selectedColor, presetColors: ['#fdf34b', '#ece788']}"></ng-container>
+    <ng-container [ngTemplateOutlet]="colorPresetTemplate" [ngTemplateOutletContext]="{type: type, color: color, selectedColor: selectedColor, presetColors: ['#f8c12b', '#e2b027']}"></ng-container>
+    <ng-container [ngTemplateOutlet]="colorPresetTemplate" [ngTemplateOutletContext]="{type: type, color: color, selectedColor: selectedColor, presetColors: ['#ee422c', '#d23d29']}"></ng-container>
+  </div>
+  <div (click)="$event.stopPropagation();">
+    <ng-container [ngTemplateOutlet]="colorPresetTemplate" [ngTemplateOutletContext]="{type: type, color: color, selectedColor: selectedColor, presetColors: ['#e2e2e2', '#cecece']}"></ng-container>
+    <ng-container [ngTemplateOutlet]="colorPresetTemplate" [ngTemplateOutletContext]="{type: type, color: color, selectedColor: selectedColor, presetColors: ['#c7e445', '#b1c93e']}"></ng-container>
+    <ng-container [ngTemplateOutlet]="colorPresetTemplate" [ngTemplateOutletContext]="{type: type, color: color, selectedColor: selectedColor, presetColors: ['#85cb4c', '#77b545']}"></ng-container>
+    <ng-container [ngTemplateOutlet]="colorPresetTemplate" [ngTemplateOutletContext]="{type: type, color: color, selectedColor: selectedColor, presetColors: ['#d3135a', '#bb1251']}"></ng-container>
+  </div>
+  <div (click)="$event.stopPropagation();">
+    <ng-container [ngTemplateOutlet]="colorPresetTemplate" [ngTemplateOutletContext]="{type: type, color: color, selectedColor: selectedColor, presetColors: ['#757575', '#696969']}"></ng-container>
+    <ng-container [ngTemplateOutlet]="colorPresetTemplate" [ngTemplateOutletContext]="{type: type, color: color, selectedColor: selectedColor, presetColors: ['#1fc5cc', '#1dafb5']}"></ng-container>
+    <ng-container [ngTemplateOutlet]="colorPresetTemplate" [ngTemplateOutletContext]="{type: type, color: color, selectedColor: selectedColor, presetColors: ['#189c7e', '#178c70']}"></ng-container>
+    <ng-container [ngTemplateOutlet]="colorPresetTemplate" [ngTemplateOutletContext]="{type: type, color: color, selectedColor: selectedColor, presetColors: ['#8911a0', '#7b118f']}"></ng-container>
+  </div>
+  <div (click)="$event.stopPropagation();">
+    <ng-container [ngTemplateOutlet]="colorPresetTemplate" [ngTemplateOutletContext]="{type: type, color: color, selectedColor: selectedColor, presetColors: ['#191919', '#000']}"></ng-container>
+    <ng-container [ngTemplateOutlet]="colorPresetTemplate" [ngTemplateOutletContext]="{type: type, color: color, selectedColor: selectedColor, presetColors: ['#2c8fea', '#297fd0']}"></ng-container>
+    <ng-container [ngTemplateOutlet]="colorPresetTemplate" [ngTemplateOutletContext]="{type: type, color: color, selectedColor: selectedColor, presetColors: ['#3a40a6', '#353b94']}"></ng-container>
+    <ng-container [ngTemplateOutlet]="colorPresetTemplate" [ngTemplateOutletContext]="{type: type, color: color, selectedColor: selectedColor, presetColors: ['#5a25a7', '#512495']}"></ng-container>
+  </div>
+  <div (click)="$event.stopPropagation();">
+    <mat-icon id="add-color"
+              (colorPickerChange)="drawColorSelected(type, $event)"
+              [colorPicker]="selectedColor ? selectedColor : color"
+              [style.backgroundColor]="selectedColor ? selectedColor : color"
+              [cpEyeDropper]="true"
+              [cpOKButton]="true"
+              cpOKButtonText="Избери"
+              cpOKButtonClass= "btn btn-primary btn-xs"
+              [cpCancelButton]="true"
+              cpCancelButtonText="Откажи"
+              cpCancelButtonClass=""
+              [cpDisableInput]="true">add</mat-icon>
+  </div>
+</ng-template>
+
+<ng-template #colorPresetTemplate let-presetColors="presetColors" let-color="color" let-selectedColor="selectedColor" let-type="type">
+  <span class="draw-color-circle" [class.selected]="selectedColor ? selectedColor === presetColors[0] : color === presetColors[0]"
+        (click)="drawColorSelected(type, presetColors[0])" [style]="{backgroundColor: presetColors[0], borderColor: presetColors[1]}"></span>
+</ng-template>
+
+<!-- an hidden div is created to set the position of appearance of the menu-->
+<div #contextMenuMenuTrigger="matMenuTrigger" style="visibility: hidden; position: fixed;"
+     [style.left]="contextMenuX"
+     [style.top]="contextMenuY"
+     [matMenuTriggerFor]="contextMenu"></div>
+<mat-menu #contextMenu="matMenu" [hasBackdrop]="false" class="context-menu">
+  <ng-container *ngIf="selectedObjects.length > 0">
+    <ng-container *ngIf="isHyperLinkSelected()">
+      <button mat-menu-item (click)="visitHyperlink(selectedObjects[0])">
+        <mat-icon>cloud_upload</mat-icon>
+        <span>Посети</span>
+        <span class="hint">Ctrl+Click</span>
+      </button>
+      <button mat-menu-item (click)="removeHyperlink()">
+        <mat-icon>link_off</mat-icon>
+        <span>Премахни връзката</span>
+      </button>
+      <mat-divider></mat-divider>
+    </ng-container>
+    <button mat-menu-item (click)="bringToFront()">
+      <mat-icon>join_right</mat-icon>
+      <span>Bring to front</span>
+      <span class="hint">Shift+Ctrl+]</span>
+    </button>
+    <button mat-menu-item (click)="bringForward()">
+      <mat-icon>join_right</mat-icon>
+      <span>Bring forward</span>
+      <span class="hint">Ctrl+]</span>
+    </button>
+    <button mat-menu-item (click)="sendBackward()">
+      <mat-icon>join_left</mat-icon>
+      <span>Send backward</span>
+      <span class="hint">Ctrl+[</span>
+    </button>
+    <button mat-menu-item (click)="sendToBack()">
+      <mat-icon>join_left</mat-icon>
+      <span>Send to back</span>
+      <span class="hint">Shift+Ctrl+[</span>
+    </button>
+    <mat-divider></mat-divider>
+  </ng-container>
+  <button mat-menu-item (click)="save()">
+    <mat-icon>save</mat-icon>
+    <span>Запази</span>
+    <span class="hint">Ctrl+S</span>
+  </button>
+  <button mat-menu-item (click)="download()">
+    <mat-icon>file_download</mat-icon>
+    <span>Свали</span>
+  </button>
+  <mat-divider></mat-divider>
+  <ng-container *ngIf="selectedObjects.length > 0">
+    <button mat-menu-item (click)="deleteObjects()">
+      <mat-icon>delete</mat-icon>
+      <span>Изтрий</span>
+      <span class="hint">Del</span>
+    </button>
+  </ng-container>
+  <button mat-menu-item (click)="clearCanvas()">
+    <mat-icon>close</mat-icon>
+    <span>Изтрий всичко</span>
+  </button>
+</mat-menu>
