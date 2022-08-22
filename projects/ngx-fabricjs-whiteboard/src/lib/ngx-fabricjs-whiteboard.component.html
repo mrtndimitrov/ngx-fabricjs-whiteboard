@@ -60,7 +60,7 @@
         top: noHeader ? '0' : '42px',
         height: noHeader ? '100%' : 'calc(100% - 42px)'
       }"></div>
-  <canvas id="ngx-fabricjs-whiteboard" [style]="{top: noHeader ? '0' : '42px'}"></canvas>
+  <canvas id="ngx-fabricjs-whiteboard"></canvas>
 
   <mat-menu #textMenu="matMenu" [hasBackdrop]="false" xPosition="after" [overlapTrigger]="false" class="text-menu">
     <div (click)="$event.stopPropagation();" fxLayout="row" fxLayoutAlign="start center">

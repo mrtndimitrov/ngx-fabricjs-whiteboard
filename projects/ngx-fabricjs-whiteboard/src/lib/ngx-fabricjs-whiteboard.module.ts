@@ -15,10 +15,10 @@ import { UploadImageDialog } from './upload-image-dialog';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { NgxDropzoneModule } from 'ngx-dropzone';
-import {FormsModule, ReactiveFormsModule} from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { CreateHyperlinkDialog } from './create-hyperlink-dialog';
-import {MatInputModule} from "@angular/material/input";
-import {MatDividerModule} from "@angular/material/divider";
+import { MatInputModule } from '@angular/material/input';
+import { MatDividerModule } from '@angular/material/divider';
 
 @NgModule({
   declarations: [
